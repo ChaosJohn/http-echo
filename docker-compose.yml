@@ -3,11 +3,11 @@ web:
   ports: 
     - "8080:80"
   volumes:
-    - ./index.php:/code/index.php
+    - .:/code
     - ./site.conf:/etc/nginx/conf.d/site.conf
   links:
     - php
 php: 
   image: php:fpm-alpine
   volumes:
-    - ./index.php:/code/index.php
+    - .:/code
