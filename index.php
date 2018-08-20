@@ -22,6 +22,7 @@ if (!function_exists('getallheaders')) {
 
 $method = $_SERVER['REQUEST_METHOD']; 
 $path = $_SERVER['PATH_INFO']; 
+$requestUri = $_SERVER['REQUEST_URI']; 
 $query = $_SERVER['QUERY_STRING']; 
 $body = file_get_contents('php://input'); 
 $headers = getallheaders(); 
@@ -29,10 +30,26 @@ $contentType = $_SERVER['CONTENT_TYPE'];
 $accept = $_SERVER['HTTP_ACCEPT']; 
 $contentLength = $_SERVER['CONTENT_LENGTH']; 
 
+if (empty($path) && !empty($requestUri)) {
+  if (0 === strpos($requestUri, '/')) $requestUri = substr($requestUri, 1); 
+  $requestUriSplits = explode('?', $requestUri); 
+  $path = $requestUriSplits[0]; 
+  if (empty($query) && count($requestUriSplits) > 0) $query = str_replace($path.'?', '', $requestUri); 
+}
+
+$infos = [
+  'method' => $method, 
+  'path' => $path, 
+  'headers' => $headers, 
+  'accept' => $accept, 
+  'params' => $_REQUEST
+]; 
+
 $bodyPretty = null; 
 if (false !== strpos($contentType, 'json')) { 
   // application/json
-  $bodyPretty = json_decode($body); 
+  $bodyPretty = json_decode($body, true); 
+  $infos['params'] = array_merge($infos['params'], $bodyPretty); 
 } else if (false !== strpos($contentType, 'x-www-form-urlencoded')){
   // application/x-www-form-urlencoded
   $bodyPretty = []; 
@@ -44,14 +61,6 @@ if (false !== strpos($contentType, 'json')) {
     $bodyPretty[$key] = $value; 
   }
 }
-
-$infos = [
-  'method' => $method, 
-  'path' => $path, 
-  'headers' => $headers, 
-  'accept' => $accept, 
-  'params' => $_REQUEST
-]; 
 
 if (!empty($contentType)) $infos['content-type'] = $contentType; 
 if (!empty($contentLength)) $infos['content-length'] = $contentLength; 
@@ -68,6 +77,7 @@ if (!empty($query)) {
     $queryPretty[$key] = $value; 
   }
   $infos['queryPretty'] = $queryPretty; 
+  $infos['params'] = array_merge($infos['params'], $queryPretty); 
 }
 
 echo json_encode($infos, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES); 
